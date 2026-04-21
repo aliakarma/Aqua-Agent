@@ -1,0 +1,75 @@
+# =============================================================================
+# AquaAgent — Governance Constraint Configuration
+# Implements the three constraint classes from paper Equations (5)-(7).
+# All per-zone values are expressed as fractions of baseline demand unless
+# noted; actual L/s values are resolved at runtime from EPANET demands.
+# (Assumption A8: specific numerical values not given in paper.)
+# =============================================================================
+
+governance:
+  enabled: true
+
+  # ---------------------------------------------------------------------------
+  # c1: Maximum consumption cap per zone
+  # q_{t,z}^consumed <= q_max^(z)
+  # expressed as a multiplier on baseline demand
+  # ---------------------------------------------------------------------------
+  consumption_cap:
+    enabled: true
+    default_cap_multiplier: 1.5       # 150% of baseline demand cap
+    # Zone-specific overrides (commercial/industrial vs. residential)
+    zone_overrides:
+      # Industrial zones get higher caps
+      industrial_zones: [0, 1, 2, 3, 4]
+      industrial_cap_multiplier: 2.0
+      # Hospital / critical zones
+      critical_zones: [13, 14, 15]    # Zone 14 = hospital (from paper example)
+      critical_cap_multiplier: 1.2
+
+  # ---------------------------------------------------------------------------
+  # c2: Fairness constraint — distributional equity across zones
+  # q_{t,z}^delivered / q_{t,z}^demanded >= q_{t,z'}^delivered / q_{t,z'}^demanded - δ_fair
+  # ---------------------------------------------------------------------------
+  fairness:
+    enabled: true
+    delta_fair: 0.15                  # Maximum allowed delivery ratio gap between zones
+    check_all_pairs: false            # If true, check all O(n^2) pairs; if false, check vs. median
+
+  # ---------------------------------------------------------------------------
+  # c3: Emergency supply guarantee
+  # q_{t,z}^delivered >= q_emergency^(z) if σ_z = 1
+  # ---------------------------------------------------------------------------
+  emergency:
+    enabled: true
+    default_emergency_fraction: 0.4   # 40% of baseline demand must be guaranteed
+    # Critical infrastructure zones always have σ_z = 1 (always-on emergency flag)
+    always_emergency_zones: [13, 14, 15]  # hospitals, fire stations
+    # Emergency minimum as fraction of baseline demand
+    critical_emergency_fraction: 0.8
+
+  # ---------------------------------------------------------------------------
+  # L1-projection fallback (paper Equation 8)
+  # When a proposed action is infeasible, select nearest feasible action
+  # measured in L1 norm over the discrete action encoding.
+  # ---------------------------------------------------------------------------
+  projection:
+    method: "l1_search"               # "l1_search" | "greedy"
+    valve_delta_resolution: 0.1       # Discretisation step for δ ∈ [-1,1]
+
+  # ---------------------------------------------------------------------------
+  # Audit ledger settings
+  # ---------------------------------------------------------------------------
+  audit:
+    enabled: true
+    log_path: "logs/audit_ledger.csv"
+    log_approved: false               # Only log overrides by default (reduces I/O)
+    log_overrides: true
+    justification_codes:
+      cap_violation: "C1_CAP"
+      fairness_violation: "C2_FAIR"
+      emergency_violation: "C3_EMRG"
+      approved: "APPROVED"
+      override: "OVERRIDE"
+
+  # Override frequency tracking (for reporting)
+  expected_override_rate: 0.091       # 9.1% from paper Section 5.2

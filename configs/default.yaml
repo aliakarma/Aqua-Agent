@@ -1,0 +1,41 @@
+# =============================================================================
+# AquaAgent — Default Experiment Configuration
+# All sub-configs are merged at runtime; values here are top-level overrides.
+# =============================================================================
+
+project:
+  name: "aquaagent"
+  version: "1.0.0"
+  description: "Agentic AI for Smart Water Leak Detection and Governance"
+
+# Reproducibility
+seed: 42
+seeds: [42, 43, 44, 45, 46]   # 5 independent seeds for multi-run evaluation
+
+# Compute
+device: "cuda"                  # "cuda" | "cpu"
+num_workers: 8                  # Parallel MAPPO rollout workers
+use_amp: false                  # Automatic mixed precision (set true for A100)
+
+# Paths
+paths:
+  data_dir: "data"
+  raw_dir: "data/raw"
+  generated_dir: "data/generated"
+  splits_dir: "data/splits"
+  checkpoints_dir: "checkpoints"
+  logs_dir: "logs"
+  figures_dir: "figures"
+  audit_log: "logs/audit_ledger.csv"
+
+# Sub-config references (loaded and merged by config loader)
+network_config: "configs/network.yaml"
+training_config: "configs/training.yaml"
+governance_config: "configs/governance.yaml"
+
+# Logging
+logging:
+  level: "INFO"
+  tensorboard: true
+  log_interval: 100             # Steps between console log entries
+  eval_interval: 10000          # Steps between evaluation checkpoints

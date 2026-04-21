@@ -1,0 +1,65 @@
+# =============================================================================
+# AquaAgent — Network / Digital Twin Configuration
+# Matches the paper's simulated DMA: 261 nodes, 213 pipes, 48 zones.
+# =============================================================================
+
+network:
+  name: "aquaagent_dma"
+  inp_file: "data/raw/aquaagent_dma.inp"   # EPANET input file
+
+  # Topology (from paper Table 2)
+  num_nodes: 261
+  num_edges: 213
+  num_demand_zones: 48
+  num_prv: 18                              # Pressure-reducing valves
+  num_tanks: 4
+  num_reservoirs: 2
+
+  # Hydraulic simulation settings
+  simulation:
+    duration_days: 365
+    time_step_seconds: 1                   # 1-Hz sampling frequency
+    hydraulic_step_seconds: 1              # EPANET hydraulic time step
+    quality_step_seconds: 300
+    report_step_seconds: 1
+
+  # Sensor noise model (Assumption A2)
+  sensor_noise:
+    pressure_sigma: 0.05                   # metres
+    flow_sigma: 0.01                       # L/s
+    noise_seed: 0                          # Separate seed for noise
+
+  # Monitoring Agent feature extraction
+  monitoring:
+    sampling_hz: 1
+    feature_window_minutes: 5             # Rolling statistics window
+    feature_dim: 12                       # d_feat (Assumption A4)
+    # Feature list (Assumption A4):
+    # 0: mean_flow,  1: std_flow,   2: roc_flow,   3: max_flow,  4: min_flow,
+    # 5: mean_pres,  6: std_pres,   7: roc_pres,   8: max_pres,  9: min_pres,
+    # 10: demand,   11: time_sin   (cyclic time-of-day encoding)
+    kalman_process_noise: 1.0e-4
+    kalman_measurement_noise: 1.0e-2
+    lstm_imputer_hidden: 64               # LSTM gap imputer hidden units (A3)
+
+  # Leak injection
+  leak:
+    event_probability: 0.493              # 180/365 days
+    max_simultaneous: 5
+    min_simultaneous: 1
+    profiles: ["burst", "background", "slow_onset"]
+    profile_weights: [0.33, 0.34, 0.33]
+    # Log-normal magnitude distribution (calibrated to IWA leakage index)
+    lognormal_mu: -1.5                    # ln(L/s)
+    lognormal_sigma: 0.8
+    # Semi-Markov leak duration parameters (hours)
+    burst_duration_mean: 2.0
+    background_duration_mean: 48.0
+    slow_onset_growth_hours: 6.0          # Time to reach full magnitude
+
+  # Graph construction
+  graph:
+    # Edge features: pipe length, diameter, roughness (from EPANET)
+    edge_feature_dim: 3
+    # Node types: 0=junction, 1=reservoir, 2=tank
+    node_type_dim: 3

@@ -1,0 +1,70 @@
+# =============================================================================
+# AquaAgent — Python Dependencies
+# Tested on Python 3.10, CUDA 12.1, Ubuntu 22.04 (A100 GPU)
+# =============================================================================
+
+# ── Core deep learning ──
+torch==2.2.0
+torchvision==0.17.0          # For transforms used in data pipeline
+
+# ── Graph neural networks ──
+torch-geometric==2.5.0
+torch-scatter==2.1.2          # Required by PyG; install separately (see README)
+torch-sparse==0.6.18          # Required by PyG; install separately (see README)
+
+# ── Scientific computing ──
+numpy==1.26.4
+scipy==1.12.0
+
+# ── EPANET hydraulic simulator ──
+epyt==1.1.4                   # Python wrapper for EPANET 2.2
+
+# ── Data I/O ──
+h5py==3.10.0
+pandas==2.2.0
+pyyaml==6.0.1
+
+# ── ML utilities ──
+scikit-learn==1.4.0           # For AUC, F1 cross-checks
+
+# ── Experiment tracking ──
+tensorboard==2.16.2
+
+# ── Testing ──
+pytest==8.0.0
+pytest-cov==4.1.0
+
+# ── Notebooks ──
+jupyter==1.0.0
+matplotlib==3.8.3
+seaborn==0.13.2
+ipywidgets==8.1.2
+
+# ── Code quality ──
+black==24.2.0
+flake8==7.0.0
+isort==5.13.2
+
+# ── Optional: faster data loading ──
+# numba==0.59.0               # JIT-compiled rolling stats (uncomment if needed)
+
+# =============================================================================
+# Installation notes:
+#
+# 1. Create environment:
+#    conda create -n aquaagent python=3.10 && conda activate aquaagent
+#
+# 2. Install PyTorch with correct CUDA version:
+#    pip install torch==2.2.0 torchvision==0.17.0 --index-url https://download.pytorch.org/whl/cu121
+#
+# 3. Install PyTorch Geometric wheels:
+#    pip install torch-scatter torch-sparse -f https://data.pyg.org/whl/torch-2.2.0+cu121.html
+#    pip install torch-geometric==2.5.0
+#
+# 4. Install remaining dependencies:
+#    pip install -r requirements.txt
+#
+# NOTE: epyt requires EPANET 2.2 shared libraries. On Linux/macOS these are
+#       bundled with epyt. On Windows, install EPANET from
+#       https://www.epa.gov/water-research/epanet before installing epyt.
+# =============================================================================
