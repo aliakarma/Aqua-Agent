@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Agentic AI for Smart Water Leak Detection and Governance in Urban Water Distribution Systems"
+authors:
+  - family-names: Akarma
+    given-names: Ali
+    orcid: https://orcid.org/0009-0002-6687-9380
+ 
+version: 1.0.0
+date-released: 2026-04-22
+repository-code: https://github.com/aliakarma/Aqua-Agent
+license: MIT
