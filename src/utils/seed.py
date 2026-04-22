@@ -22,8 +22,13 @@ def set_seed(seed: int) -> None:
     os.environ["PYTHONHASHSEED"] = str(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
+
+    # FIX-16 (R1-mn2): Only call CUDA seed functions when a CUDA device is
+    # actually available.  Calling them on CPU-only machines is harmless but
+    # generates noisy warnings in some PyTorch versions.
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
 
     # Ensure deterministic CUDA operations where possible.
     # NOTE: may reduce performance on some GPU kernels.

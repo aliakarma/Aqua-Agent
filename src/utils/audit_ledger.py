@@ -62,10 +62,13 @@ class AuditLedger:
             "C1_CAP": 0, "C2_FAIR": 0, "C3_EMRG": 0
         }
 
-        # Create parent dirs and write CSV header if file doesn't exist
+        # Create parent dirs and write CSV header if file doesn't exist.
+        # FIX-08 (R2-M1): Use encoding="utf-8" explicitly to prevent crashes
+        # on Windows systems with cp1252 default encoding when action strings
+        # contain Unicode characters.
         self.path.parent.mkdir(parents=True, exist_ok=True)
         if not self.path.exists():
-            with open(self.path, "w", newline="") as f:
+            with open(self.path, "w", newline="", encoding="utf-8") as f:
                 writer = csv.DictWriter(f, fieldnames=self.FIELDNAMES)
                 writer.writeheader()
 
@@ -97,7 +100,7 @@ class AuditLedger:
             c3_violated=c3_violated,
         )
 
-        with open(self.path, "a", newline="") as f:
+        with open(self.path, "a", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=self.FIELDNAMES)
             writer.writerow(
                 {k: v for k, v in zip(self.FIELDNAMES, astuple(entry))}
@@ -126,7 +129,7 @@ class AuditLedger:
     def query_overrides(self) -> List[LedgerEntry]:
         """Return all override entries as a list of LedgerEntry objects."""
         entries = []
-        with open(self.path, "r", newline="") as f:
+        with open(self.path, "r", newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)
             for row in reader:
                 if row["overridden"].lower() == "true":
