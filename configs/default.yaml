@@ -12,6 +12,16 @@ project:
 seed: 42
 seeds: [42, 43, 44, 45, 46]   # 5 independent seeds for multi-run evaluation
 
+# EPANET strict mode (FIX-04):
+#   strict_epanet: true  → fail fast if epyt or .inp file is missing (recommended
+#                          for publication-grade runs on the real network).
+#   strict_epanet: false → silently fall back to stochastic mock simulation
+#                          (default; required when EPANET is unavailable).
+# All results in the current release were produced with strict_epanet: false
+# (mock simulation mode). See README §Reproducibility for details.
+reproducibility:
+  strict_epanet: false
+
 # Compute
 device: "cuda"                  # "cuda" | "cpu"
 num_workers: 8                  # Parallel MAPPO rollout workers
