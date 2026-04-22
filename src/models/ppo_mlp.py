@@ -210,7 +210,7 @@ def action_dict_to_str(action: dict) -> str:
     if name == "adjust_valve":
         valve = int(action.get("valve", -1))
         delta = float(action.get("delta", 0.0))
-        return f"adjust_valve(v={valve}, δ={delta:.3f})"
+        return f"adjust_valve(v={valve}, delta={delta:.3f})"
     elif name == "isolate":
         edge = int(action.get("edge", -1))
         return f"isolate(e={edge})"
