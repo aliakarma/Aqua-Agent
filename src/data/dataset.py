@@ -68,12 +68,23 @@ class WaterLeakDataset(Dataset):
             )
         raw_idx = np.load(idx_path)
 
-        # Filter: only indices where a full lookback window is available
+        # Filter: only indices where a full lookback window is available AND
+        # all timesteps in the window [t_end-lookback, t_end] belong to this
+        # split.  This prevents training-period history from leaking into
+        # val/test windows (FIX-06 / Reviewer 2 Issue 2).
         min_start = lookback
-        valid = raw_idx[raw_idx >= min_start]
+        split_set = set(int(i) for i in raw_idx.tolist())
+        valid = []
+        for t_end in raw_idx:
+            t_end = int(t_end)
+            if t_end < min_start:
+                continue
+            # Verify the entire lookback window lies within the split index set.
+            if all((t_end - k) in split_set for k in range(lookback + 1)):
+                valid.append(t_end)
 
         # Apply stride to reduce dataset size (Assumption A10)
-        self._window_ends = valid[::stride]
+        self._window_ends = np.array(valid[::stride], dtype=np.int64)
 
         # Pre-compute features from raw signals (flows + pressures → d_feat tensor)
         self._flows     = self._data["flows"]      # [T_total, num_edges]
@@ -147,9 +158,13 @@ class WaterLeakDataset(Dataset):
         dem   = self._demands[t_start:t_end, :E]
 
         # Instantaneous values
+        # NOTE (FIX-15 / R1-mn1): The lines
+        #   feat[:, :, 3] = flows   (max proxy)
+        #   feat[:, :, 4] = flows   (min proxy)
+        # that appeared here before the rolling loop were redundant — the loop
+        # overwrites feat[:,:,3] and feat[:,:,4] at every step via f_win.max()
+        # and f_win.min().  They have been removed to avoid misleading readers.
         feat[:, :, 0] = flows                          # mean proxy (instant)
-        feat[:, :, 4] = flows                          # min proxy
-        feat[:, :, 3] = flows                          # max proxy
 
         # Pressure (mapped to edge axis if V < E)
         V = pres.shape[1]

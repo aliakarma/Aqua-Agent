@@ -59,6 +59,17 @@ def load_config(config_path: str) -> dict:
                 sub_cfg = yaml.safe_load(f)
             cfg[sub_key] = sub_cfg.get(sub_key, sub_cfg)
 
+    # FIX-05 (Reviewer 2 Issue 1): Backward-compatible flattening.
+    # simulate.py stores training sub-config under cfg['training'], but many
+    # consumers (anomaly_agent.py, decision_agent.py, train_ada.py, etc.) read
+    # cfg['ada'] / cfg['mappo'] / cfg['baselines'] / cfg['dataset'] directly.
+    # Flatten those keys to the top level so both access patterns work.
+    training_block = cfg.get("training", {})
+    if isinstance(training_block, dict):
+        for k in ("ada", "mappo", "baselines", "dataset"):
+            if k in training_block and k not in cfg:
+                cfg[k] = training_block[k]
+
     return cfg
 
 
@@ -115,7 +126,16 @@ def run_simulation(cfg: dict, seed: int = 42) -> dict:
             day_labels[s]    = state.leak_indicator.astype(np.int8)
             day_exog[s]      = state.exogenous
 
-            action = {"type": 3, "edge": 0, "valve": 0, "delta": 0.0}  # no_op default
+            # Assumption A12 (see ASSUMPTIONS.md): Data generation uses the
+            # no_op action at every step, producing a purely observational
+            # (passive) dataset under natural leak dynamics.  This is intentional:
+            # the ADA is pre-trained on observation-only data so that it learns
+            # to detect leaks from hydraulic signatures alone, without confounding
+            # from control actions.  The DA is then trained separately via MAPPO
+            # on the live environment, where actions do affect the state.
+            # Known limitation flagged by Reviewer 1: the ADA training distribution
+            # may not fully represent post-action hydraulic states.
+            action = {"type": 3, "edge": 0, "valve": 0, "delta": 0.0}  # no_op
             state, done = dt.step(action)
 
         flows_list.append(day_flows)
