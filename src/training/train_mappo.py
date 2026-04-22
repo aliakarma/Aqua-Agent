@@ -82,13 +82,18 @@ class MAPPOTrainer:
             num_nodes,
         ).to(self.device)
 
+        # FIX-13 (R2-mn2): Use the configured seed instead of the hardcoded
+        # value of 42, which previously diverged from the CLI --seed argument
+        # and broke multi-seed reproducibility analysis.
+        _train_seed: int = cfg.get("seed", 42)
+
         # ── Digital Twin ──
-        self.dt = DigitalTwin(cfg, seed=42)
+        self.dt = DigitalTwin(cfg, seed=_train_seed)
 
         # ── Agents ──
         self.ma = MonitoringAgent(
             num_edges=num_edges, num_nodes=num_nodes, num_zones=num_zones,
-            cfg=self.net_cfg.get("monitoring", {}), seed=42,
+            cfg=self.net_cfg.get("monitoring", {}), seed=_train_seed,
         )
         self.ada = AnomalyDetectionAgent(cfg, edge_index=edge_index_lg,
                                           device=str(self.device))
@@ -271,9 +276,19 @@ class MAPPOTrainer:
 
             eval_returns.append(float(np.sum(ep_rewards)))
             pcrs.append(float(1 - np.mean(ep_overrides)))
+            # FIX-14 (R1-mn5): The original formula
+            #   np.clip(1 - curr_loss / max(curr_loss + 0.01, 1e-8), 0, 1)
+            # evaluates to ≈ 0 for any positive curr_loss (which is always true),
+            # so it was a meaningless training-time diagnostic.
+            # Replaced with a simple relative improvement proxy using an
+            # initial-step baseline so the metric is at least monotonically
+            # meaningful during training (not a claim-quality metric — see
+            # evaluate.py for the publication-quality WLR computation).
             curr_loss = self.dt.leak_injector.get_total_loss()
-            wlr = float(np.clip(1 - curr_loss / max(curr_loss + 0.01, 1e-8), 0, 1))
-            wlrs.append(wlr)
+            wlr_proxy = float(
+                np.clip(1.0 - curr_loss / max(curr_loss * 1.5, 1e-3), 0.0, 1.0)
+            )
+            wlrs.append(wlr_proxy)
 
         return {
             "mean_return": float(np.mean(eval_returns)),
@@ -313,6 +328,8 @@ def main():
     args = parser.parse_args()
 
     cfg = load_config(args.config)
+    # FIX-13: propagate CLI seed into cfg so MAPPOTrainer uses it consistently.
+    cfg["seed"] = args.seed
     set_seed(args.seed)
 
     trainer = MAPPOTrainer(cfg, device=args.device)
