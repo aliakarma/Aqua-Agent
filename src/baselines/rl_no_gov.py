@@ -1,6 +1,18 @@
 """
 src/baselines/rl_no_gov.py
 ---------------------------
+DEPRECATED — this file is retained for historical reference only.
+
+FIX-10 (Reviewer 1 Issue M3): RLNoGovAgent is dead code.  B3 evaluation is
+handled directly in src/evaluation/evaluate.py (_eval_no_gov) by instantiating
+DecisionAgent with governance disabled.  This wrapper was never called by any
+evaluation or training entry point and has been removed from the package
+__init__.py export surface.
+
+Do NOT import or use this class in new code.
+
+Original docstring preserved below:
+
 B3: AquaAgent without the Governance Agent.
 
 Paper Section 4.4:
