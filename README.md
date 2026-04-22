@@ -67,7 +67,7 @@ aquaagent/
 │   └── utils/                # Seed, logging, audit ledger, graph utils
 ├── scripts/                  # Shell scripts for each pipeline stage
 ├── notebooks/                # Jupyter analysis notebooks
-├── tests/                    # pytest unit tests (59 tests)
+├── tests/                    # pytest unit tests (47 tests)
 ├── checkpoints/              # Saved model weights (generated)
 ├── logs/                     # TensorBoard logs + audit ledger (generated)
 ├── figures/                  # Generated plots
@@ -234,18 +234,39 @@ Available dashboards:
 
 ---
 
-## Assumptions
+## Reproducibility Notice
 
-Due to missing implementation details in the paper, the following assumptions are made (see Phase 1 planning doc for full list):
-
-- **A1**: EPANET `.inp` network file is synthetically generated matching paper specs (261 nodes, 213 pipes). Falls back to mock simulation if `epyt` or `.inp` not found.
-- **A2**: Sensor noise σ_pressure=0.05 m, σ_flow=0.01 L/s (reasonable engineering values).
-- **A4**: d_feat=12 features are: mean/std/roc/max/min flow & pressure, demand, time-sin encoding.
-- **A5**: TCN dilation schedule [1, 2, 4, 8] (standard Bai et al. 2018).
-- **A9**: MAPPO uses Centralised Training Decentralised Execution (CTDE).
-- Full assumption list in `ASSUMPTIONS.md`.
+> ⚠️ **Important**: All results reported in `logs/results.json` and in the paper
+> Table 1 were produced in **mock-simulation mode** (stochastic random-walk dynamics),
+> because the EPANET `.inp` network file (`data/raw/aquaagent_dma.inp`) is not
+> included in this public release.
+>
+> - **Default (mock mode)**: `reproducibility.strict_epanet: false` in `configs/default.yaml`
+> - **EPANET mode** (requires `.inp` + `epyt`): set `strict_epanet: true` — raises
+>   `RuntimeError` if prerequisites are missing.
+>
+> See `data/raw/README.md` for instructions on obtaining or generating the network file.
+> Mock-mode metrics are **not** directly comparable to full EPANET hydraulic results.
 
 ---
+
+## Assumptions
+
+Full list in `ASSUMPTIONS.md`. Key assumptions:
+
+- **A1**: Falls back to stochastic mock simulation when `epyt` or `.inp` is unavailable.  
+  All currently reported results use mock mode (see Reproducibility Notice above).
+- **A2**: Sensor noise σ_pressure=0.05 m, σ_flow=0.01 L/s.
+- **A4**: d_feat=12 features: mean/std/roc/max/min flow & pressure, demand, time-sin.
+- **A5**: TCN dilation schedule [1, 2, 4, 8] (Bai et al. 2018).
+- **A9**: MAPPO uses Centralised Training Decentralised Execution (CTDE).
+- **A11**: Zone-to-edge assignment uses round-robin allocation (must be replaced with
+  topology-derived zone membership for real deployments).
+- **A12**: ADA training data uses passive no-op conditions (observational dataset).
+
+---
+
+## Citation
 
 ## Citation
 
