@@ -15,15 +15,17 @@ setup(
     python_requires=">=3.10",
     packages=find_packages(include=["src", "src.*"]),
     install_requires=[
-        "torch>=2.0.0",
-        "numpy>=1.24.0",
-        "scipy>=1.10.0",
-        "pyyaml>=6.0",
-        "h5py>=3.8.0",
-        "pandas>=2.0.0",
-        "scikit-learn>=1.2.0",
-        "tensorboard>=2.12.0",
-        "epyt>=1.0.0",
+        # FIX-17 (R1-mn4 / R2-mn4): Pinned to match requirements.txt exactly.
+        # torchvision removed (never imported in src/).
+        "torch>=2.2.0",
+        "numpy>=1.26.4",
+        "scipy>=1.12.0",
+        "pyyaml>=6.0.1",
+        "h5py>=3.10.0",
+        "pandas>=2.2.0",
+        "scikit-learn>=1.4.0",
+        "tensorboard>=2.16.2",
+        "epyt>=1.1.4",
     ],
     extras_require={
         "graph": ["torch-geometric>=2.3.0"],

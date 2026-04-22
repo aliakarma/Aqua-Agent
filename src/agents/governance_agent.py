@@ -341,8 +341,18 @@ class GovernanceAgent:
         """
         Approximate the per-zone flows after applying `action`.
         A full hydraulic re-solve is expensive; we use a linear approximation.
+
+        Assumption A11 (see ASSUMPTIONS.md / FIX-20 / Reviewer 1 Minor Issue 3):
+        Zone membership is assigned via round-robin allocation:
+            zone_id = edge_idx // edges_per_zone
+        This is a crude approximation that treats consecutive pipe indices as
+        belonging to the same zone.  In a real deployment this MUST be replaced
+        with topology-derived zone membership obtained from the EPANET .inp file
+        or a network GIS layer.  The approximation is acceptable for the mock
+        simulation regime where pipe indices have no physical spatial meaning,
+        but will produce incorrect governance decisions on a real network.
         """
-        # Aggregate edge flows to zones (round-robin zone assignment)
+        # Aggregate edge flows to zones (round-robin — see Assumption A11 above)
         zone_flows = np.zeros(self.num_zones, dtype=np.float32)
         flows = state.flow_rates.copy()
 
