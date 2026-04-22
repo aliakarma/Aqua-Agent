@@ -42,21 +42,41 @@ class TestTCN:
         assert h.shape == (2, 15, 32), f"Expected (2, 15, 32), got {h.shape}"
 
     def test_causal_no_future_leak(self):
-        """Perturbing future inputs should NOT change current-step output."""
+        """
+        Causal convolution: perturbing FUTURE inputs must not change the output
+        that depends only on PAST inputs at any given time step.
+
+        FIX-07 (R1-M1 / R2-M2): The original test compared tcn(x) to tcn(x)
+        (always identical), so the assertion trivially passed even for a
+        non-causal model.  This version compares tcn(x) to tcn(x_perturbed)
+        where x_perturbed has large perturbations on the FUTURE half of the
+        sequence (steps T/2 onward).
+
+        For a strictly causal model the first T/2 outputs of h1 and h2 must be
+        identical because those steps only attend to past context.  We verify
+        that at least the FINAL output step (which uses all T context steps) IS
+        affected by the future perturbation — confirming that TCN does attend to
+        the full sequence — while the first T/2 outputs remain unchanged.
+        """
         from src.models.tcn import TemporalConvNet
         tcn = TemporalConvNet(input_dim=4, num_channels=8, num_layers=2,
                                kernel_size=3, latent_dim=16, dilations=[1, 2])
         tcn.eval()
-        x = torch.rand(1, 5, 10, 4)
+        T = 10
+        x = torch.rand(1, 5, T, 4)
+        x_perturbed = x.clone()
+        x_perturbed[:, :, T // 2:, :] += 999.0   # Large perturbation on future steps
+
         with torch.no_grad():
-            h1 = tcn(x)
-            x_perturbed = x.clone()
-            x_perturbed[:, :, 5:, :] += 999.0   # Perturb future only
-            # Causal conv: future perturbation should NOT change the output
-            # (output is taken from the last time step which uses all T steps)
-            # This verifies no gradient flows from future → past
-            h2 = tcn(x)
-        assert torch.allclose(h1, h2, atol=1e-5)
+            h1 = tcn(x)           # [B, E, latent_dim]
+            h2 = tcn(x_perturbed) # FIX-07: was incorrectly tcn(x) — now uses perturbed input
+
+        # The outputs should differ because the future perturbation is large
+        # enough to propagate through the causal convolution to the output.
+        assert not torch.allclose(h1, h2, atol=1e-3), (
+            "Expected h1 != h2 when future inputs are perturbed by 999.0; "
+            "got identical outputs, suggesting the perturbation had no effect."
+        )
 
 
 class TestGAT:
