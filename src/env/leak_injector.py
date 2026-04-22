@@ -127,21 +127,29 @@ class LeakInjector:
         self.total_injected = 0
         self.total_loss_L = 0.0
 
-    def step(self, state) -> None:
+    def step(self, state, isolated_edges: set | None = None) -> None:
         """
         Advance leak dynamics by one time step.
         Called after each hydraulic solve step.
 
         Args:
-            state: Current HydraulicState (used to check if new day started).
+            state:           Current HydraulicState (used to check if new day started).
+            isolated_edges:  Set of edge indices whose flow has been zeroed by a DA
+                             action.  Loss on these edges is NOT accumulated because
+                             isolating a pipe stops further water escape.
+                             (FIX-11 / Reviewer 1 Issue M4)
         """
         self._current_step += 1
+        if isolated_edges is None:
+            isolated_edges = set()
 
         # Advance existing leaks
         expired = []
         for leak in self._active_leaks:
             leak.current_step += 1
-            self.total_loss_L += leak.current_magnitude  # 1-second accumulation
+            # Only accumulate loss if the leaking edge is NOT isolated.
+            if leak.edge_idx not in isolated_edges:
+                self.total_loss_L += leak.current_magnitude  # 1-second accumulation
             if leak.is_expired:
                 expired.append(leak)
 

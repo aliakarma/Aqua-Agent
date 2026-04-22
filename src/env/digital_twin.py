@@ -110,12 +110,26 @@ class DigitalTwin:
             seed=seed + 2,
         )
 
-        # Try to load epyt; gracefully fall back to mock simulation
+        # Try to load epyt; gracefully fall back to mock simulation unless
+        # strict mode is enabled (cfg.reproducibility.strict_epanet: true).
+        # FIX-04 / Reviewer 1 Issue 4 + Reviewer 2 Issue 4.
         self._epyt_available = self._try_import_epyt()
+        self._strict_epanet: bool = bool(
+            cfg.get("reproducibility", {}).get("strict_epanet", False)
+        )
         if not self._epyt_available:
+            if self._strict_epanet:
+                raise RuntimeError(
+                    "strict_epanet=True but epyt is not installed. "
+                    "Install with: pip install epyt\n"
+                    "To run in mock mode set reproducibility.strict_epanet: false "
+                    "in configs/default.yaml."
+                )
             logger.warning(
                 "epyt not available — using stochastic mock simulation. "
-                "Install epyt for full EPANET integration: pip install epyt"
+                "Install epyt for full EPANET integration: pip install epyt\n"
+                "NOTE: All metrics produced in mock mode are NOT equivalent to "
+                "EPANET hydraulic results (see README §Reproducibility)."
             )
 
     # ------------------------------------------------------------------
@@ -128,7 +142,18 @@ class DigitalTwin:
         self.leak_injector.reset()
         self.noise_model.reset()
 
-        if self._epyt_available and os.path.exists(self.inp_file):
+        epanet_ready = self._epyt_available and os.path.exists(self.inp_file)
+        if not epanet_ready and self._strict_epanet:
+            raise RuntimeError(
+                f"strict_epanet=True but EPANET prerequisites missing: "
+                f"epyt={self._epyt_available}, "
+                f"inp_exists={os.path.exists(self.inp_file)} (expected at {self.inp_file}).\n"
+                f"Either provide the network file or set "
+                f"reproducibility.strict_epanet: false in configs/default.yaml.\n"
+                f"See data/raw/README.md for instructions on obtaining the network file."
+            )
+
+        if epanet_ready:
             self._current_state = self._epanet_reset()
         else:
             self._current_state = self._mock_reset()
@@ -150,15 +175,24 @@ class DigitalTwin:
         """
         self._current_step += 1
 
+        # Determine which edges are isolated by the current action (used by
+        # leak_injector to stop loss accumulation on those edges — FIX-11).
+        isolated_edges: set = set()
+        if action is not None and action.get("type") == "isolate":
+            edge = action.get("edge")
+            if edge is not None and 0 <= int(edge) < self.num_edges:
+                isolated_edges.add(int(edge))
+
         # Apply action to EPANET model (or mock)
-        if self._epyt_available and os.path.exists(self.inp_file):
+        epanet_ready = self._epyt_available and os.path.exists(self.inp_file)
+        if epanet_ready:
             self._apply_action_epanet(action)
             self._current_state = self._epanet_step()
         else:
             self._current_state = self._mock_step(action)
 
         # Inject / update leak events
-        self.leak_injector.step(self._current_state)
+        self.leak_injector.step(self._current_state, isolated_edges=isolated_edges)
         # Update leak indicator in state
         self._current_state.leak_indicator = self.leak_injector.get_leak_indicator()
         self._current_state.timestep = self._current_step
