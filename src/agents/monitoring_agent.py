@@ -89,7 +89,7 @@ class MonitoringAgent:
         # ── LSTM imputer (Assumption A3) ──
         lstm_hidden = cfg.get("lstm_imputer_hidden", 64)
         self._lstm_imputer = _LSTMImputer(
-            input_dim=num_edges + num_nodes,
+            input_dim=num_edges,
             hidden_dim=lstm_hidden,
         )
 

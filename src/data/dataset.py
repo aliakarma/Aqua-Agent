@@ -15,6 +15,7 @@ Dataset structure:
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -248,6 +249,12 @@ def build_dataloaders(cfg: dict, num_edges: int = 213,
     lookback  = ada_cfg.get("tcn", {}).get("lookback_window", 30)
     stride    = ds_cfg.get("stride", 60)
     batch     = ada_cfg.get("training", {}).get("batch_size", 256)
+    workers   = min(4, cfg.get("num_workers", 4))
+
+    # On Windows, torch DataLoader uses spawn workers, which cannot pickle
+    # h5py dataset handles used by WaterLeakDataset.
+    if os.name == "nt":
+        workers = 0
 
     loaders = {}
     for split in ["train", "val", "test"]:
@@ -260,12 +267,13 @@ def build_dataloaders(cfg: dict, num_edges: int = 213,
             num_edges=num_edges,
             d_feat=d_feat,
         )
+        drop_last = (split == "train" and len(ds) >= batch)
         loaders[split] = DataLoader(
             ds,
             batch_size=batch,
             shuffle=(split == "train"),
-            num_workers=min(4, cfg.get("num_workers", 4)),
+            num_workers=workers,
             pin_memory=True,
-            drop_last=(split == "train"),
+            drop_last=drop_last,
         )
     return loaders
