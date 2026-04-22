@@ -5,7 +5,9 @@
 
 # ── Core deep learning ──
 torch==2.2.0
-torchvision==0.17.0          # For transforms used in data pipeline
+# NOTE (FIX-17 / R1-mn4): torchvision was listed here but is never imported
+# in any src/ or tests/ file.  It has been removed to keep the dependency
+# surface minimal and avoid unnecessary CUDA wheel downloads.
 
 # ── Graph neural networks ──
 torch-geometric==2.5.0
@@ -55,7 +57,7 @@ isort==5.13.2
 #    conda create -n aquaagent python=3.10 && conda activate aquaagent
 #
 # 2. Install PyTorch with correct CUDA version:
-#    pip install torch==2.2.0 torchvision==0.17.0 --index-url https://download.pytorch.org/whl/cu121
+# (torchvision removed — see note above; install torch alone with the index URL below)
 #
 # 3. Install PyTorch Geometric wheels:
 #    pip install torch-scatter torch-sparse -f https://data.pyg.org/whl/torch-2.2.0+cu121.html
