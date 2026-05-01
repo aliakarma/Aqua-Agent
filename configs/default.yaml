@@ -20,7 +20,7 @@ seeds: [42, 43, 44, 45, 46]   # 5 independent seeds for multi-run evaluation
 # All results in the current release were produced with strict_epanet: false
 # (mock simulation mode). See README §Reproducibility for details.
 reproducibility:
-  strict_epanet: false
+  strict_epanet: true
 
 # Compute
 device: "cuda"                  # "cuda" | "cpu"
