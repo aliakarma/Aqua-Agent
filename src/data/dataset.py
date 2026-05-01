@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 import numpy as np
+import pandas as pd
 import torch
 from torch.utils.data import Dataset, DataLoader
 
@@ -177,25 +178,34 @@ class WaterLeakDataset(Dataset):
         feat[:, :min(dem.shape[1], E), 10] = dem
 
         # Compute rolling stats for each step (using causal window)
+        # Vectorized implementation (FIX-18)
         window = 60   # 1-minute rolling window (at 1Hz)
-        for t in range(T):
-            w_start = max(0, t - window)
-            f_win = flows[w_start:t+1]
-            if f_win.shape[0] > 1:
-                feat[t, :, 0] = f_win.mean(axis=0)    # FEAT_MEAN_FLOW
-                feat[t, :, 1] = f_win.std(axis=0)     # FEAT_STD_FLOW
-                feat[t, :, 2] = (f_win[-1] - f_win[0]) / f_win.shape[0]  # FEAT_ROC_FLOW
-                feat[t, :, 3] = f_win.max(axis=0)     # FEAT_MAX_FLOW
-                feat[t, :, 4] = f_win.min(axis=0)     # FEAT_MIN_FLOW
 
-            if V > 0:
-                p_win = pres[w_start:t+1]
-                if p_win.shape[0] > 1:
-                    feat[t, :V, 5] = p_win.mean(axis=0)
-                    feat[t, :V, 6] = p_win.std(axis=0)
-                    feat[t, :V, 7] = (p_win[-1] - p_win[0]) / p_win.shape[0]
-                    feat[t, :V, 8] = p_win.max(axis=0)
-                    feat[t, :V, 9] = p_win.min(axis=0)
+        # Flows
+        df_f = pd.DataFrame(flows)
+        roll_f = df_f.rolling(window=window + 1, min_periods=2)
+
+        feat[1:, :, 0] = roll_f.mean().values[1:]
+        feat[1:, :, 1] = roll_f.std(ddof=0).values[1:]
+        feat[1:, :, 3] = roll_f.max().values[1:]
+        feat[1:, :, 4] = roll_f.min().values[1:]
+
+        t_idx = np.arange(T)
+        w_starts = np.maximum(0, t_idx - window)
+        win_sizes = (t_idx - w_starts + 1).astype(np.float32)
+        feat[:, :, 2] = (flows - flows[w_starts]) / win_sizes[:, np.newaxis]
+
+        # Pressures
+        if V > 0:
+            df_p = pd.DataFrame(pres)
+            roll_p = df_p.rolling(window=window + 1, min_periods=2)
+
+            feat[1:, :V, 5] = roll_p.mean().values[1:]
+            feat[1:, :V, 6] = roll_p.std(ddof=0).values[1:]
+            feat[1:, :V, 8] = roll_p.max().values[1:]
+            feat[1:, :V, 9] = roll_p.min().values[1:]
+
+            feat[:, :V, 7] = (pres - pres[w_starts]) / win_sizes[:, np.newaxis]
 
         # Cyclic time encoding
         abs_t = np.arange(t_start, t_end)
