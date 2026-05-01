@@ -87,7 +87,7 @@ class LSTMDataset(torch.utils.data.Dataset):
 class LSTMTrainer:
     """Supervised training loop for the LSTMDetector (B2 baseline)."""
 
-    def __init__(self, cfg: dict, device: str = "cpu"):
+    def __init__(self, cfg: dict, loaders: dict, device: str = "cpu"):
         self.cfg    = cfg
         self.device = torch.device(device)
 
@@ -108,12 +108,12 @@ class LSTMTrainer:
             num_edges=self.num_edges,
         ).to(self.device)
 
-        # FIX-09: Apply pos_weight to match ADA's class-imbalance handling.
-        pos_weight = torch.tensor(
-            train_cfg.get("pos_weight", 2.0), device=self.device
-        )
+        # FIX Class imbalance hardcoding: Use dataset's computed class weights instead of config constant.
+        _, pos_weight_val = loaders["train"].dataset.water_ds.get_class_weights()
+        logger.info(f"Using dynamically computed class weight: {pos_weight_val:.4f}")
+        pos_weight = torch.tensor([pos_weight_val], device=self.device)
+
         self.criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
-        logger.info(f"BCEWithLogitsLoss pos_weight={float(pos_weight):.2f} (FIX-09)")
 
         lr  = lstm_cfg.get("learning_rate", train_cfg.get("learning_rate", 1e-3))
         wd  = lstm_cfg.get("weight_decay",  train_cfg.get("weight_decay",  1e-5))
@@ -254,7 +254,7 @@ def main():
 
     loaders = build_lstm_loaders(cfg, num_edges=num_edges,
                                   num_nodes=num_nodes, lookback=lookback)
-    trainer = LSTMTrainer(cfg, device=args.device)
+    trainer = LSTMTrainer(cfg, loaders, device=args.device)
     trainer.train(loaders)
     logger.info("B2 LSTM training complete.")
 

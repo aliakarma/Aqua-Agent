@@ -4,6 +4,9 @@ import numpy as np
 import pytest
 
 MOCK_CFG = {
+    "reproducibility": {
+        "strict_epanet": False,
+    },
     "network": {
         "num_nodes": 20, "num_edges": 15, "num_demand_zones": 5,
         "num_prv": 2, "inp_file": "data/raw/nonexistent.inp",

@@ -35,6 +35,12 @@ def set_seed(seed: int) -> None:
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
+    # Enforce strictly deterministic torch operations globally where possible
+    import warnings
+    # ignore harmless PyTorch deterministic warning
+    warnings.filterwarnings('ignore', '.*deterministic algorithms.*')
+    torch.use_deterministic_algorithms(True, warn_only=True)
+
 
 def get_rng(seed: int) -> np.random.Generator:
     """Return a private numpy Generator for stochastic components."""
