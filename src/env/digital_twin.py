@@ -115,15 +115,13 @@ class DigitalTwin:
         # FIX-04 / Reviewer 1 Issue 4 + Reviewer 2 Issue 4.
         self._epyt_available = self._try_import_epyt()
         self._strict_epanet: bool = bool(
-            cfg.get("reproducibility", {}).get("strict_epanet", False)
+            cfg.get("reproducibility", {}).get("strict_epanet", True)
         )
         if not self._epyt_available:
             if self._strict_epanet:
                 raise RuntimeError(
-                    "strict_epanet=True but epyt is not installed. "
+                    "epyt is not installed. "
                     "Install with: pip install epyt\n"
-                    "To run in mock mode set reproducibility.strict_epanet: false "
-                    "in configs/default.yaml."
                 )
             logger.warning(
                 "epyt not available — using stochastic mock simulation. "
@@ -145,11 +143,9 @@ class DigitalTwin:
         epanet_ready = self._epyt_available and os.path.exists(self.inp_file)
         if not epanet_ready and self._strict_epanet:
             raise RuntimeError(
-                f"strict_epanet=True but EPANET prerequisites missing: "
+                f"EPANET prerequisites missing: "
                 f"epyt={self._epyt_available}, "
                 f"inp_exists={os.path.exists(self.inp_file)} (expected at {self.inp_file}).\n"
-                f"Either provide the network file or set "
-                f"reproducibility.strict_epanet: false in configs/default.yaml.\n"
                 f"See data/raw/README.md for instructions on obtaining the network file."
             )
 

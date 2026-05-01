@@ -11,8 +11,8 @@ torch==2.2.0
 
 # ── Graph neural networks ──
 torch-geometric==2.5.0
-torch-scatter==2.1.2          # Required by PyG; install separately (see README)
-torch-sparse==0.6.18          # Required by PyG; install separately (see README)
+#torch-scatter==2.1.2          # Required by PyG; install separately (see README)
+#torch-sparse==0.6.18          # Required by PyG; install separately (see README)
 
 # ── Scientific computing ──
 numpy==1.26.4

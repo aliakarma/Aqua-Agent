@@ -173,26 +173,19 @@ class Evaluator:
         ada_ckpt = ckpt_dir / "ada_best.pt"
         da_ckpt  = ckpt_dir / "da_best.pt"
 
-        if self.strict:
-            if not ada_ckpt.exists():
-                raise FileNotFoundError(
-                    f"[strict] ADA checkpoint missing: {ada_ckpt}\n"
-                    "Run: bash scripts/run_train_ada.sh"
-                )
-            if not da_ckpt.exists():
-                raise FileNotFoundError(
-                    f"[strict] DA checkpoint missing: {da_ckpt}\n"
-                    "Run: bash scripts/run_train_mappo.sh"
-                )
+        if not ada_ckpt.exists():
+            raise FileNotFoundError(
+                f"ADA checkpoint missing: {ada_ckpt}\n"
+                "Run: bash scripts/run_train_ada.sh"
+            )
+        if not da_ckpt.exists():
+            raise FileNotFoundError(
+                f"DA checkpoint missing: {da_ckpt}\n"
+                "Run: bash scripts/run_train_mappo.sh"
+            )
 
-        if ada_ckpt.exists():
-            ada.load(str(ada_ckpt)); ada.freeze()
-        else:
-            logger.warning(f"ADA checkpoint not found at {ada_ckpt}; using random weights.")
-        if da_ckpt.exists():
-            da.load(str(da_ckpt))
-        else:
-            logger.warning(f"DA checkpoint not found at {da_ckpt}; using random weights.")
+        ada.load(str(ada_ckpt)); ada.freeze()
+        da.load(str(da_ckpt))
 
         return self._run_episode(dt, ma, ada, da, gov, seed, use_gov=True, label="AquaAgent")
 
@@ -214,19 +207,21 @@ class Evaluator:
         da  = DecisionAgent(obs_dim=obs_dim, cfg=self.cfg, device=str(self.device))
 
         ckpt_dir = Path(self.paths.get("checkpoints_dir", "checkpoints"))
-        if (ckpt_dir / "ada_best.pt").exists():
-            ada.load(str(ckpt_dir / "ada_best.pt")); ada.freeze()
+        ada_ckpt = ckpt_dir / "ada_best.pt"
+        if not ada_ckpt.exists():
+            raise FileNotFoundError(
+                f"ADA checkpoint missing: {ada_ckpt}\n"
+                "Run: bash scripts/run_train_ada.sh"
+            )
+        ada.load(str(ada_ckpt)); ada.freeze()
 
         b3_ckpt = ckpt_dir / "da_no_gov_best.pt"
-        if self.strict and not b3_ckpt.exists():
+        if not b3_ckpt.exists():
             raise FileNotFoundError(
-                f"[strict] B3 checkpoint missing: {b3_ckpt}\n"
+                f"B3 checkpoint missing: {b3_ckpt}\n"
                 "Run: bash scripts/run_train_no_gov.sh"
             )
-        if b3_ckpt.exists():
-            da.load(str(b3_ckpt))
-        else:
-            logger.warning(f"B3 checkpoint not found at {b3_ckpt}; using random weights.")
+        da.load(str(b3_ckpt))
 
         return self._run_episode(dt, ma, ada, da, gov=None, seed=seed,
                                   use_gov=False, label="B3_No_Gov")
@@ -251,15 +246,12 @@ class Evaluator:
             num_edges=self.num_edges,
         )
         ckpt = Path(self.paths.get("checkpoints_dir", "checkpoints")) / "lstm_best.pt"
-        if self.strict and not ckpt.exists():
+        if not ckpt.exists():
             raise FileNotFoundError(
-                f"[strict] B2 checkpoint missing: {ckpt}\n"
+                f"B2 checkpoint missing: {ckpt}\n"
                 "Run: bash scripts/run_train_lstm.sh"
             )
-        if ckpt.exists():
-            det.load(str(ckpt))
-        else:
-            logger.warning(f"B2 checkpoint not found at {ckpt}; using random weights.")
+        det.load(str(ckpt))
         return self._run_baseline_episode(dt, det, seed, "B2_LSTM")
 
     def _eval_rules(self, seed: int) -> dict:

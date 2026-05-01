@@ -42,7 +42,7 @@ logger = get_logger("train_ada")
 class ADATrainer:
     """Manages the full ADA supervised pre-training loop."""
 
-    def __init__(self, cfg: dict, device: str = "cpu"):
+    def __init__(self, cfg: dict, loaders: dict, device: str = "cpu"):
         self.cfg    = cfg
         self.device = torch.device(device)
         self.ada_cfg = cfg.get("ada", {})
@@ -63,9 +63,10 @@ class ADATrainer:
         self.model = AnomalyDetectionAgent(cfg, edge_index=edge_index, device=str(self.device))
 
         # Loss
-        pos_weight = torch.tensor(
-            self.train_cfg.get("pos_weight", 2.0), device=self.device
-        )
+        # FIX Class imbalance hardcoding: Use dataset's computed class weights instead of config constant.
+        _, pos_weight_val = loaders["train"].dataset.get_class_weights()
+        logger.info(f"Using dynamically computed class weight: {pos_weight_val:.4f}")
+        pos_weight = torch.tensor([pos_weight_val], device=self.device)
         self.criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
         # Optimizer
@@ -270,7 +271,7 @@ def main():
         d_feat=cfg.get("network", {}).get("monitoring", {}).get("feature_dim", 12),
     )
 
-    trainer = ADATrainer(cfg, device=args.device)
+    trainer = ADATrainer(cfg, loaders, device=args.device)
     trainer.train(loaders)
     logger.info("ADA pre-training complete.")
 
