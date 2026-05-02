@@ -63,7 +63,7 @@ class ADATrainer:
         self.model = AnomalyDetectionAgent(cfg, edge_index=edge_index, device=str(self.device))
 
         # Loss
-        # FIX Class imbalance hardcoding: Use dataset's computed class weights instead of config constant.
+        # Handle class imbalance: Use dataset's computed class weights instead of config constant.
         _, pos_weight_val = loaders["train"].dataset.get_class_weights()
         logger.info(f"Using dynamically computed class weight: {pos_weight_val:.4f}")
         pos_weight = torch.tensor([pos_weight_val], device=self.device)
